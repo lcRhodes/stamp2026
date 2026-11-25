@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phase transitions as a renormalisation flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=STIX+Two+Text:ital,wght@0,400;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e9edf1; --surface: #f8fafb; --ink: #142030; --muted: #556274; --rule: #c9d2dc;
+  --up: #e8a33d; --down: #1d3557; --ordered: #e8a33d; --disordered: #3b6ea5; --crit: #a4307a; --now: #d62839;
+  --btn-bg: #1d3557; --btn-ink: #f8fafb; --focus: #a4307a;
+  color-scheme: light; box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141c; --surface: #151e29; --ink: #e3e9f0; --muted: #93a1b3; --rule: #2b3746;
+    --up: #f2b450; --down: #2a4e7c; --ordered: #f2b450; --disordered: #6fa0d8; --crit: #e070b0; --now: #ff5a6a;
+    --btn-bg: #e3e9f0; --btn-ink: #0e141c; --focus: #e070b0; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141c; --surface: #151e29; --ink: #e3e9f0; --muted: #93a1b3; --rule: #2b3746;
+  --up: #f2b450; --down: #2a4e7c; --ordered: #f2b450; --disordered: #6fa0d8; --crit: #e070b0; --now: #ff5a6a;
+  --btn-bg: #e3e9f0; --btn-ink: #0e141c; --focus: #e070b0; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 17px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 48px; }
+h1 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.1; margin: 0 0 8px; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); max-width: 70ch; }
+.m, var { font-family: "STIX Two Text", "Cambria Math", "Times New Roman", serif; }
+var { font-style: italic; }
+.m { white-space: nowrap; font-size: 1.06em; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 16px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; }
+.card h2 { font-size: 1.08rem; margin: 0 0 4px; }
+.card .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 8px; }
+canvas.plot { display: block; width: 100%; cursor: crosshair; touch-action: manipulation; }
+#flow { aspect-ratio: 1 / 1; }
+#phase { aspect-ratio: 1 / 1; }
+.bar { margin-top: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; row-gap: 12px; align-items: center; }
+@media (max-width: 760px) { .bar { grid-template-columns: minmax(0, 1fr); } }
+.side { display: grid; gap: 16px; }
+.verdict { font-size: 1.05rem; margin: 0; min-height: 4.6em; }
+.verdict strong.ordered { color: var(--ordered); }
+.verdict strong.disordered { color: var(--disordered); }
+.verdict strong.critical { color: var(--crit); }
+@media (prefers-color-scheme: light) { .verdict strong.ordered { color: #a8661a; } }
+:root[data-theme="light"] .verdict strong.ordered { color: #a8661a; }
+.slider label { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; flex-wrap: wrap; }
+.slider output { font-family: "STIX Two Text", "Times New Roman", serif; font-size: 1.05em; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--now); }
+.controls { display: grid; gap: 12px; }
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+button.act { font: inherit; font-weight: 700; cursor: pointer; padding: 9px 15px; border-radius: 4px; border: 2px solid var(--btn-bg); background: var(--btn-bg); color: var(--btn-ink); }
+button.act.secondary { background: transparent; color: var(--ink); border-color: var(--rule); }
+button.act:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.zooms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+@media (max-width: 640px) { .zooms { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cgrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .cgrow { grid-template-columns: minmax(0, 1fr); } }
+.cgrow .zooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ph2 { font-size: 1rem; margin: 10px 0 6px; }
+#phase2 { aspect-ratio: 1 / 1; }
+.zoom canvas { display: block; width: 100%; aspect-ratio: 1 / 1; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid var(--rule); }
+.zoom p { margin: 6px 0 0; font-size: 0.9rem; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.zoom p b { color: var(--ink); font-weight: 700; }
+.lattice { margin-top: 24px; }
+.explain { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 28px; }
+@media (max-width: 900px) { .explain { grid-template-columns: minmax(0, 1fr); } }
+.explain h3 { font-size: 1.02rem; margin: 0 0 6px; }
+.explain p { margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; }
+.formula { background: var(--surface); border-left: 4px solid var(--up); padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; color: var(--ink); }
+.intro { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 20px; align-items: start; }
+@media (max-width: 900px) { .intro { grid-template-columns: auto minmax(0, 1fr); } .intro .plots { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .intro { grid-template-columns: minmax(0, 1fr); } .intro figure { justify-self: center; } }
+.intro h2 { font-size: 1.08rem; margin: 0 0 6px; }
+.intro p { margin: 0 0 8px; font-size: 0.95rem; max-width: 62ch; }
+.intro p b { font-weight: 700; }
+.intro .defs { display: grid; gap: 4px; margin: 4px 0 10px; }
+.intro .defs p { margin: 0; display: flex; align-items: baseline; gap: 12px; }
+.intro .sym { font-family: "STIX Two Text", "Times New Roman", serif; font-style: italic; font-size: 1.7rem; line-height: 1; min-width: 1.1em; }
+.formula.step { display: grid; gap: 6px; font-size: 1.12em; }
+.kl { margin: 0; font-variant-numeric: tabular-nums; }
+.intro figure { margin: 0; }
+.intro figcaption { color: var(--muted); font-size: 0.85rem; max-width: 160px; margin-top: 4px; }
+.intro svg text { font-family: "STIX Two Text", "Times New Roman", serif; font-style: italic; font-size: 17px; fill: var(--ink); stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; paint-order: stroke; }
+.intro2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 20px; }
+.intro2 h2 { font-size: 1.08rem; margin: 0 0 8px; }
+.modelrow { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: center; max-width: 900px; margin: 0 auto; }
+@media (max-width: 520px) { .modelrow { grid-template-columns: minmax(0, 1fr); } .modelrow figure { justify-self: center; } }
+.modelrow figure { margin: 0; }
+.modelrow figure svg { width: 230px; height: 230px; display: block; }
+.hamrow { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; column-gap: 0.35em; }
+.hamrow .term { display: inline-flex; flex-direction: column; align-items: center; }
+.hamrow .under { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 0.5em; color: var(--muted); line-height: 1.2; }
+.ham { font-size: clamp(1.25rem, 2.1vw, 1.65rem); text-align: center; margin: 6px 0 12px; white-space: normal; line-height: 1.6; }
+.legend2 { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.schem { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; }
+@media (max-width: 640px) { .schem { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.schem figure { margin: 0; }
+.schem svg { display: block; width: 100%; height: auto; }
+.schem figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 2px; }
+.schem .bond { stroke: var(--rule); stroke-width: 2; }
+.schem .faint { opacity: 0.45; }
+.schem .kept { fill: var(--down); stroke: var(--surface); stroke-width: 2; }
+.schem .summed { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+.schem .hi { opacity: 1; }
+.schem .kpath { fill: none; stroke: var(--up); stroke-width: 4.5; stroke-linejoin: round; stroke-linecap: round; }
+.schem .lpath { stroke: var(--crit); stroke-width: 3; stroke-dasharray: 5 4; }
+.schem .lpath.thin { stroke-width: 2; }
+.schem text { font-family: "STIX Two Text", "Times New Roman", serif; font-style: italic; font-size: 17px; fill: var(--ink); stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; paint-order: stroke; }
+.plabel { text-align: center; font-size: 1.25rem; min-height: 1.6em; margin-bottom: 4px; }
+.spinkey { text-align: center; color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
+.spinkey .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.spinkey .dot.up { background: var(--up); }
+.spinkey .dot.down { background: var(--down); }
+.intro2 .lattice, .intro2 .bar { margin-top: 0; }
+.defs2 { display: grid; gap: 4px; justify-items: center; text-align: center; color: var(--muted); font-size: 0.95rem; margin-top: 6px; }
+.defs2 p { margin: 0; }
+.defs2 .m { color: var(--ink); }
+.hamrow .term.lbl { position: relative; }
+.hamrow .term.lbl .under { position: absolute; top: 100%; right: -2px; white-space: nowrap; }
+.eqtitle { text-align: center; font-weight: 700; font-size: 1rem; margin: 18px 0 0; color: var(--ink); }
+.ham.small { font-size: clamp(1.05rem, 1.7vw, 1.35rem); margin: 4px 0 0; }
+.schem .newbond { stroke: var(--muted); stroke-width: 3; }
+.schem .arr { stroke: var(--ink); stroke-width: 2.5; }
+.note2 { margin: 12px auto 0; max-width: 900px; text-align: center; color: var(--muted); font-size: 0.95rem; }
+.modelrow svg text { font-family: "STIX Two Text", "Times New Roman", serif; font-style: italic; font-size: 17px; fill: var(--ink); stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; paint-order: stroke; }
+footer { margin-top: 32px; color: var(--muted); font-size: 0.88rem; max-width: 90ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Phase transitions as a renormalisation flow</h1>
+</header>
+
+<section class="intro2">
+  <div class="card model">
+    <h2>The Ising model</h2>
+    <div class="modelrow">
+      <figure>
+        <svg viewBox="0 0 250 250" width="250" height="250" role="img" aria-label="A 3 by 3 patch of spins, with solid lines joining nearest neighbours. An arrow labelled J joins two nearest neighbours. An arrow labelled J sub d joins two diagonal neighbours.">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker></defs>
+      <g stroke="var(--muted)" stroke-width="3">
+        <line x1="50" y1="60" x2="200" y2="60"/><line x1="50" y1="135" x2="200" y2="135"/><line x1="50" y1="210" x2="200" y2="210"/>
+        <line x1="50" y1="60" x2="50" y2="210"/><line x1="125" y1="60" x2="125" y2="210"/><line x1="200" y1="60" x2="200" y2="210"/>
+      </g>
+      <g stroke="var(--surface)" stroke-width="3">
+        <circle cx="50" cy="60" r="16" fill="var(--up)"/><circle cx="125" cy="60" r="16" fill="var(--up)"/><circle cx="200" cy="60" r="16" fill="var(--down)"/>
+        <circle cx="50" cy="135" r="16" fill="var(--up)"/><circle cx="125" cy="135" r="16" fill="var(--up)"/><circle cx="200" cy="135" r="16" fill="var(--down)"/>
+        <circle cx="50" cy="210" r="16" fill="var(--down)"/><circle cx="125" cy="210" r="16" fill="var(--up)"/><circle cx="200" cy="210" r="16" fill="var(--down)"/>
+      </g>
+      <g stroke="var(--ink)" stroke-width="2.5" fill="none">
+        <line x1="64" y1="30" x2="111" y2="30" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <line x1="142" y1="152" x2="183" y2="193" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      </g>
+      <text x="87.5" y="22" text-anchor="middle" style="font-size:24px;font-weight:700">J</text>
+      <text x="174" y="166" text-anchor="middle" style="font-size:24px;font-weight:700">J<tspan dy="5" style="font-size:15px;font-style:normal">d</tspan></text>
+    </svg>
+        <figcaption class="spinkey"><span class="dot up"></span>spin up&emsp;<span class="dot down"></span>spin down</figcaption>
+      </figure>
+      <div>
+        <p class="eqtitle" style="margin-top: 0">Hamiltonian</p>
+        <div class="ham hamrow m"><span><var>H</var> = −<var>J</var></span><span class="term"><span>∑ <var>s<sub>i</sub>s<sub>j</sub></var></span><span class="under">nearest</span></span><span>− <var>J</var><sub>d</sub></span><span class="term"><span>∑ <var>s<sub>i</sub>s<sub>j</sub></var></span><span class="under">diagonal</span></span></div>
+        <div class="defs2">
+          <p><span class="m"><var>s<sub>i</sub></var> = ±1</span>: a spin&emsp;&emsp;<span class="m"><var>J</var>, <var>J</var><sub>d</sub></span>: bond energies</p>
+        </div>
+        <p class="eqtitle">Partition function</p>
+        <div class="ham small hamrow m"><span><var>Z</var> =</span><span class="term"><span>∑ e<sup>−<var>H</var>/<var>k</var><sub>B</sub><var>T</var></sup></span><span class="under">configurations</span></span><span>=</span><span class="term"><span>∑ exp(</span><span class="under">configurations</span></span><span><var>K</var></span><span class="term"><span>∑ <var>s<sub>i</sub>s<sub>j</sub></var></span><span class="under">nearest</span></span><span>+ <var>L</var></span><span class="term"><span>∑ <var>s<sub>i</sub>s<sub>j</sub></var>)</span><span class="under">diagonal</span></span></div>
+        <div class="defs2">
+          <p><span class="m"><var>K</var> = <var>J</var>/<var>k</var><sub>B</sub><var>T</var>, <var>L</var> = <var>J</var><sub>d</sub>/<var>k</var><sub>B</sub><var>T</var></span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <section class="card lattice">
+  <h2>Coarse-graining</h2>
+  <!--
+    NOTE ON THE SIMULATION vs THIS TEXT
+    The text below describes single-spin (heat-bath / Gibbs) sampling of the full model,
+    with both the nearest-neighbour coupling K and the diagonal coupling L.
+    The simulation actually differs in two ways (see tick() in the script):
+      1. It is a nearest-neighbour-only Ising model (no diagonal coupling L). Its coupling
+         is K_sim = 0.4407 * Tc(J_d/J) / T, which puts it at the same T/Tc as the chosen
+         conditions on the phase diagram. (0.4407 is the exact 2D critical coupling;
+         Tc(J_d/J) comes from the approximate flow K' = 2K^2 + L, L' = K^2.)
+         This keeps the snapshots consistent with the approximate phase diagram, and is
+         justified by universality: at large scales, systems the same distance from their
+         transition look alike.
+      2. It updates spins with the Wolff cluster algorithm, not one spin at a time. Both
+         methods sample the same Gibbs distribution; the cluster method is much faster
+         near Tc.
+  -->
+  <p class="sub">Each spin is sampled from its probability given its neighbours:</p>
+  <p class="ham small m"><var>P</var>(<var>s<sub>i</sub></var> = +1) = 1 / [1 + e<sup>−2(<var>K h<sub>i</sub></var> + <var>L d<sub>i</sub></var>)</sup>]</p>
+  <p class="sub" style="text-align: center"><span class="m"><var>h<sub>i</sub></var></span>, <span class="m"><var>d<sub>i</sub></var></span>: sums of the nearest and diagonal neighbours of spin <span class="m"><var>i</var></span>&emsp;&emsp;<span class="m">|<var>m</var>| = |(1/<var>N</var>) ∑<sub><var>i</var></sub> <var>s<sub>i</sub></var>|</span></p>
+  <div class="cgrow">
+  <div class="zooms">
+    <div class="zoom"><canvas id="z0" width="243" height="243" aria-label="Original lattice"></canvas><p><b>Original</b><span id="m0"></span></p></div>
+    <div class="zoom"><canvas id="z1" width="81" height="81" aria-label="Zoomed out 3 times"></canvas><p><b>Zoomed out × 3</b><span id="m1"></span></p></div>
+    <div class="zoom"><canvas id="z2" width="27" height="27" aria-label="Zoomed out 9 times"></canvas><p><b>Zoomed out × 9</b><span id="m2"></span></p></div>
+    <div class="zoom"><canvas id="z3" width="9" height="9" aria-label="Zoomed out 27 times"></canvas><p><b>Zoomed out × 27</b><span id="m3"></span></p></div>
+  </div>
+  <div class="phase2box"><h3 class="ph2">The phase diagram</h3><canvas id="phase2" class="plot" aria-label="Phase diagram of temperature against the ratio J sub d over J, with the ordered and disordered regions and the current conditions."></canvas></div>
+  </div>
+  </section>
+  <section class="card controls bar" aria-label="Conditions for the coarse-graining snapshots">
+    <div class="slider">
+      <label for="ratio2"><span><span class="m"><var>J</var><sub>d</sub>/<var>J</var></span> ratio</span><output id="rOut2"></output></label>
+      <input type="range" id="ratio2" min="0" max="1.5" step="0.01">
+    </div>
+    <div class="slider">
+      <label for="temp2"><span><span class="m"><var>T</var></span> temperature</span><output id="tempOut2"></output></label>
+      <input type="range" id="temp2" min="0.8" max="8" step="0.01">
+    </div>
+  </section>
+  <div class="card step">
+    <h2>One coarse-graining step</h2>
+    <p class="ham m"><var>K</var>′ = 2<var>K</var><sup>2</sup> + <var>L</var>&emsp;&emsp;<var>L</var>′ = <var>K</var><sup>2</sup></p>
+    <div class="schem">
+      <figure><svg viewBox="0 0 164 164" role="img" aria-label="A square grid of spins. Alternate spins, in a checkerboard, are filled (kept) or hollow (summed over). Three spins in a row along the top are labelled s1 (kept), s0 (hollow) and s2 (kept)."><g transform="translate(4 12) scale(0.95)"><line class="bond" x1="22" y1="22" x2="52" y2="22"/><line class="bond" x1="22" y1="22" x2="22" y2="52"/><line class="bond" x1="52" y1="22" x2="82" y2="22"/><line class="bond" x1="52" y1="22" x2="52" y2="52"/><line class="bond" x1="82" y1="22" x2="112" y2="22"/><line class="bond" x1="82" y1="22" x2="82" y2="52"/><line class="bond" x1="112" y1="22" x2="142" y2="22"/><line class="bond" x1="112" y1="22" x2="112" y2="52"/><line class="bond" x1="142" y1="22" x2="142" y2="52"/><line class="bond" x1="22" y1="52" x2="52" y2="52"/><line class="bond" x1="22" y1="52" x2="22" y2="82"/><line class="bond" x1="52" y1="52" x2="82" y2="52"/><line class="bond" x1="52" y1="52" x2="52" y2="82"/><line class="bond" x1="82" y1="52" x2="112" y2="52"/><line class="bond" x1="82" y1="52" x2="82" y2="82"/><line class="bond" x1="112" y1="52" x2="142" y2="52"/><line class="bond" x1="112" y1="52" x2="112" y2="82"/><line class="bond" x1="142" y1="52" x2="142" y2="82"/><line class="bond" x1="22" y1="82" x2="52" y2="82"/><line class="bond" x1="22" y1="82" x2="22" y2="112"/><line class="bond" x1="52" y1="82" x2="82" y2="82"/><line class="bond" x1="52" y1="82" x2="52" y2="112"/><line class="bond" x1="82" y1="82" x2="112" y2="82"/><line class="bond" x1="82" y1="82" x2="82" y2="112"/><line class="bond" x1="112" y1="82" x2="142" y2="82"/><line class="bond" x1="112" y1="82" x2="112" y2="112"/><line class="bond" x1="142" y1="82" x2="142" y2="112"/><line class="bond" x1="22" y1="112" x2="52" y2="112"/><line class="bond" x1="22" y1="112" x2="22" y2="142"/><line class="bond" x1="52" y1="112" x2="82" y2="112"/><line class="bond" x1="52" y1="112" x2="52" y2="142"/><line class="bond" x1="82" y1="112" x2="112" y2="112"/><line class="bond" x1="82" y1="112" x2="82" y2="142"/><line class="bond" x1="112" y1="112" x2="142" y2="112"/><line class="bond" x1="112" y1="112" x2="112" y2="142"/><line class="bond" x1="142" y1="112" x2="142" y2="142"/><line class="bond" x1="22" y1="142" x2="52" y2="142"/><line class="bond" x1="52" y1="142" x2="82" y2="142"/><line class="bond" x1="82" y1="142" x2="112" y2="142"/><line class="bond" x1="112" y1="142" x2="142" y2="142"/><circle class="kept" cx="22" cy="22" r="7"/><circle class="summed" cx="52" cy="22" r="6"/><circle class="kept" cx="82" cy="22" r="7"/><circle class="summed" cx="112" cy="22" r="6"/><circle class="kept" cx="142" cy="22" r="7"/><circle class="summed" cx="22" cy="52" r="6"/><circle class="kept" cx="52" cy="52" r="7"/><circle class="summed" cx="82" cy="52" r="6"/><circle class="kept" cx="112" cy="52" r="7"/><circle class="summed" cx="142" cy="52" r="6"/><circle class="kept" cx="22" cy="82" r="7"/><circle class="summed" cx="52" cy="82" r="6"/><circle class="kept" cx="82" cy="82" r="7"/><circle class="summed" cx="112" cy="82" r="6"/><circle class="kept" cx="142" cy="82" r="7"/><circle class="summed" cx="22" cy="112" r="6"/><circle class="kept" cx="52" cy="112" r="7"/><circle class="summed" cx="82" cy="112" r="6"/><circle class="kept" cx="112" cy="112" r="7"/><circle class="summed" cx="142" cy="112" r="6"/><circle class="kept" cx="22" cy="142" r="7"/><circle class="summed" cx="52" cy="142" r="6"/><circle class="kept" cx="82" cy="142" r="7"/><circle class="summed" cx="112" cy="142" r="6"/><circle class="kept" cx="142" cy="142" r="7"/></g><text x="25" y="20" text-anchor="middle" style="font-size:14px">s<tspan dy="3" style="font-size:10px">1</tspan></text><text x="53.5" y="20" text-anchor="middle" style="font-size:14px">s<tspan dy="3" style="font-size:10px">0</tspan></text><text x="82" y="20" text-anchor="middle" style="font-size:14px">s<tspan dy="3" style="font-size:10px">2</tspan></text></svg></figure>
+      <figure><svg viewBox="0 0 164 164" role="img" aria-label="Two kept spins on a diagonal are joined by two paths of two nearest-neighbour bonds, through two hollow spins, and by their old diagonal bond."><line class="bond" x1="32" y1="32" x2="82" y2="32"/><line class="bond" x1="32" y1="32" x2="32" y2="82"/><line class="bond" x1="82" y1="32" x2="132" y2="32"/><line class="bond" x1="82" y1="32" x2="82" y2="82"/><line class="bond" x1="132" y1="32" x2="132" y2="82"/><line class="bond" x1="32" y1="82" x2="82" y2="82"/><line class="bond" x1="32" y1="82" x2="32" y2="132"/><line class="bond" x1="82" y1="82" x2="132" y2="82"/><line class="bond" x1="82" y1="82" x2="82" y2="132"/><line class="bond" x1="132" y1="82" x2="132" y2="132"/><line class="bond" x1="32" y1="132" x2="82" y2="132"/><line class="bond" x1="82" y1="132" x2="132" y2="132"/><path class="kpath" d="M32,32 L82,32 L82,82"/><path class="kpath" d="M32,32 L32,82 L82,82"/><line class="lpath" x1="32" y1="32" x2="82" y2="82"/><circle class="kept" cx="32" cy="32" r="9"/><circle class="summed" cx="82" cy="32" r="8"/><circle class="kept faint" cx="132" cy="32" r="9"/><circle class="summed" cx="32" cy="82" r="8"/><circle class="kept" cx="82" cy="82" r="9"/><circle class="summed faint" cx="132" cy="82" r="8"/><circle class="kept faint" cx="32" cy="132" r="9"/><circle class="summed faint" cx="82" cy="132" r="8"/><circle class="kept faint" cx="132" cy="132" r="9"/><text x="94" y="62">K²</text><text x="26" y="108">K²</text><text x="60" y="51">L</text></svg></figure>
+      <figure><svg viewBox="0 0 164 164" role="img" aria-label="Two kept spins two sites apart in a line are joined by one path of two nearest-neighbour bonds through a hollow spin."><line class="bond" x1="32" y1="32" x2="82" y2="32"/><line class="bond" x1="32" y1="32" x2="32" y2="82"/><line class="bond" x1="82" y1="32" x2="132" y2="32"/><line class="bond" x1="82" y1="32" x2="82" y2="82"/><line class="bond" x1="132" y1="32" x2="132" y2="82"/><line class="bond" x1="32" y1="82" x2="82" y2="82"/><line class="bond" x1="32" y1="82" x2="32" y2="132"/><line class="bond" x1="82" y1="82" x2="132" y2="82"/><line class="bond" x1="82" y1="82" x2="82" y2="132"/><line class="bond" x1="132" y1="82" x2="132" y2="132"/><line class="bond" x1="32" y1="132" x2="82" y2="132"/><line class="bond" x1="82" y1="132" x2="132" y2="132"/><path class="kpath" d="M32,82 L82,82 L132,82"/><circle class="summed faint" cx="32" cy="32" r="8"/><circle class="kept faint" cx="82" cy="32" r="9"/><circle class="summed faint" cx="132" cy="32" r="8"/><circle class="kept" cx="32" cy="82" r="9"/><circle class="summed" cx="82" cy="82" r="8"/><circle class="kept" cx="132" cy="82" r="9"/><circle class="summed faint" cx="32" cy="132" r="8"/><circle class="kept faint" cx="82" cy="132" r="9"/><circle class="summed faint" cx="132" cy="132" r="8"/><text x="70" y="66">K²</text></svg></figure>
+      <figure><svg viewBox="0 0 164 164" role="img" aria-label="Only the kept spins remain, forming a square grid turned 45 degrees and joined by solid lines to their new nearest neighbours. An arrow labelled K prime joins two new nearest neighbours. An arrow labelled L prime joins two new diagonal neighbours."><defs><marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker></defs><line class="newbond" x1="14" y1="14" x2="59" y2="59"/><line class="newbond" x1="104" y1="14" x2="149" y2="59"/><line class="newbond" x1="59" y1="59" x2="104" y2="104"/><line class="newbond" x1="59" y1="59" x2="104" y2="14"/><line class="newbond" x1="14" y1="104" x2="59" y2="149"/><line class="newbond" x1="14" y1="104" x2="59" y2="59"/><line class="newbond" x1="104" y1="104" x2="149" y2="149"/><line class="newbond" x1="104" y1="104" x2="149" y2="59"/><line class="newbond" x1="59" y1="149" x2="104" y2="104"/><circle class="kept" cx="14" cy="14" r="9"/><circle class="kept" cx="104" cy="14" r="9"/><circle class="kept" cx="59" cy="59" r="9"/><circle class="kept" cx="149" cy="59" r="9"/><circle class="kept" cx="14" cy="104" r="9"/><circle class="kept" cx="104" cy="104" r="9"/><circle class="kept" cx="59" cy="149" r="9"/><circle class="kept" cx="149" cy="149" r="9"/><line class="arr" x1="68.2" y1="68.2" x2="94.8" y2="94.8" marker-start="url(#ah2)" marker-end="url(#ah2)"/><line class="arr" x1="149" y1="72" x2="149" y2="136" marker-start="url(#ah2)" marker-end="url(#ah2)"/><text x="68" y="100" text-anchor="middle" style="font-size:19px;font-weight:700">K′</text><text x="132" y="111" text-anchor="middle" style="font-size:19px;font-weight:700">L′</text></svg></figure>
+    </div>
+    <p class="note2">Two bonds in a row act like one weaker bond of strength <span class="m"><var>K</var><sup>2</sup></span>:</p>
+    <p class="ham small m">∑<sub><var>s</var><sub>0</sub> = ±1</sub> e<sup><var>K s</var><sub>0</sub>(<var>s</var><sub>1</sub> + <var>s</var><sub>2</sub>)</sup> = 2 cosh <var>K</var>(<var>s</var><sub>1</sub> + <var>s</var><sub>2</sub>) ≈ 2(1 + <var>K</var><sup>2</sup> + <var>K</var><sup>2</sup><var>s</var><sub>1</sub><var>s</var><sub>2</sub>) ≈ <var>C</var> e<sup><var>K</var><sup>2</sup><var>s</var><sub>1</sub><var>s</var><sub>2</sub></sup></p>
+  </div>
+</section>
+
+
+<section class="card controls bar" aria-label="Conditions">
+  <div class="slider">
+    <label for="ratio"><span><span class="m"><var>J</var><sub>d</sub>/<var>J</var></span> ratio</span><output id="rOut"></output></label>
+    <input type="range" id="ratio" min="0" max="1.5" step="0.01">
+  </div>
+  <div class="slider">
+    <label for="temp"><span><span class="m"><var>T</var></span> temperature</span><output id="tempOut"></output></label>
+    <input type="range" id="temp" min="0.8" max="8" step="0.01">
+  </div>
+</section>
+
+<div class="main">
+  <div class="card">
+    <h2>The flow of couplings</h2>
+    <canvas id="flow" class="plot" aria-label="The plane of couplings, with flow arrows, the two regions, the boundary between them, the fixed points, and the path of the current conditions."></canvas>
+  </div>
+  <div class="side">
+    <div class="card">
+      <h2>The phase diagram</h2>
+      <canvas id="phase" class="plot" aria-label="Phase diagram of temperature against the ratio J sub d over J, with the ordered and disordered regions and the current conditions."></canvas>
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+<script>
+// ---------- physics ----------
+const KC_EXACT = 0.5 * Math.log(1 + Math.SQRT2);
+const mk = (K, L) => [2 * K * K + L, K * K];
+function fate(K, L) {
+  for (let i = 0; i < 60; i++) {
+    if (K + L > 4) return 1;
+    if (K + L < 1e-4) return -1;
+    [K, L] = mk(K, L);
+  }
+  return 0;
+}
+function betaC(r) {
+  let lo = 0, hi = 5;
+  for (let i = 0; i < 70; i++) { const m = (lo + hi) / 2; if (fate(m, r * m) === 1) hi = m; else lo = m; }
+  return (lo + hi) / 2;
+}
+const Tc = (r) => 1 / betaC(r);
+const RMAX = 1.5, TMAX = 8;
+const tcCurve = [];
+for (let i = 0; i <= 90; i++) { const r = (RMAX * i) / 90; tcCurve.push([Tc(r), r]); }
+
+// critical line (boundary) in (K, L)
+function boundaryK(Lv) {
+  if (fate(0, Lv) === 1) return null;
+  let lo = 0, hi = 3;
+  for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (fate(m, Lv) === 1) hi = m; else lo = m; }
+  return (lo + hi) / 2;
+}
+const critLine = [];
+for (let i = 0; i <= 160; i++) { const Lv = (0.42 * i) / 160, k = boundaryK(Lv); if (k !== null) critLine.push([k, Lv]); }
+{ let lo = 0, hi = 1; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (fate(0, m) === 1) hi = m; else lo = m; } critLine.push([0, (lo + hi) / 2]); }
+
+// unstable manifold through the critical fixed point
+const FIX = [1 / 3, 1 / 9];
+const lam = (4 / 3 + Math.sqrt(16 / 9 + 8 / 3)) / 2;
+const ev = [1, lam - 4 / 3];
+function orbit(K, L, n) { const pts = [[K, L]]; for (let i = 0; i < n; i++) { [K, L] = mk(K, L); pts.push([K, L]); if (K + L > 60 || K + L < 1e-6) break; } return pts; }
+const manifoldLow = orbit(FIX[0] - 1e-7 * ev[0], FIX[1] - 1e-7 * ev[1], 80);
+const manifoldHigh = orbit(FIX[0] + 1e-7 * ev[0], FIX[1] + 1e-7 * ev[1], 80);
+
+// Monte Carlo
+const L0 = 243;
+function wolffSweep(s, L, K, stack) {
+  const N = L * L, p = 1 - Math.exp(-2 * K);
+  let flipped = 0;
+  while (flipped < N) {
+    const seed = (Math.random() * N) | 0, spin = s[seed];
+    s[seed] = -spin; let sp = 0, size = 1; stack[sp++] = seed;
+    while (sp > 0) {
+      const i = stack[--sp], x = i % L, y = (i - x) / L;
+      const a = y * L + (x + 1 === L ? 0 : x + 1), b = y * L + (x === 0 ? L - 1 : x - 1);
+      const c = (y + 1 === L ? 0 : y + 1) * L + x, d = (y === 0 ? L - 1 : y - 1) * L + x;
+      if (s[a] === spin && Math.random() < p) { s[a] = -spin; stack[sp++] = a; size++; }
+      if (s[b] === spin && Math.random() < p) { s[b] = -spin; stack[sp++] = b; size++; }
+      if (s[c] === spin && Math.random() < p) { s[c] = -spin; stack[sp++] = c; size++; }
+      if (s[d] === spin && Math.random() < p) { s[d] = -spin; stack[sp++] = d; size++; }
+    }
+    flipped += size;
+  }
+}
+function coarseGrain3(s, L) {
+  const L2 = L / 3, out = new Int8Array(L2 * L2);
+  for (let by = 0; by < L2; by++) for (let bx = 0; bx < L2; bx++) {
+    let sum = 0;
+    for (let dy = 0; dy < 3; dy++) { const row = (3 * by + dy) * L + 3 * bx; sum += s[row] + s[row + 1] + s[row + 2]; }
+    out[by * L2 + bx] = sum > 0 ? 1 : -1;
+  }
+  return out;
+}
+
+// ---------- interface ----------
+const $ = (id) => document.getElementById(id);
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hexToRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+let pal;
+function readPalette() {
+  pal = {};
+  ['surface', 'ink', 'muted', 'rule', 'up', 'down', 'ordered', 'disordered', 'crit', 'now'].forEach((k) => { pal[k] = css('--' + k); });
+}
+readPalette();
+const FONT = '"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif';
+const MATH = '"STIX Two Text", "Times New Roman", serif';
+function prep(cv) {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+function arrowHead(ctx, x, y, ang, size) {
+  ctx.beginPath(); ctx.moveTo(x, y);
+  ctx.lineTo(x - size * Math.cos(ang - 0.45), y - size * Math.sin(ang - 0.45));
+  ctx.lineTo(x - size * Math.cos(ang + 0.45), y - size * Math.sin(ang + 0.45));
+  ctx.closePath(); ctx.fill();
+}
+
+const state = { T: 2.5, r: 0.3, marks: [] };
+const SUBS = ['₀', '₁', '₂', '₃', '₄', '₅'];
+const couplings = (T, r) => [1 / T, r / T];
+const CS = 0.3; // squash couplings into [0, 1): c -> c / (c + CS), so infinity sits at the edge
+const sq = (c) => c / (c + CS);
+const unsq = (x) => { x = Math.min(x, 1 - 1e-9); return CS * x / (1 - x); };
+const toC = (K, L) => [sq(K), sq(L)];
+const fromC = (x, y) => [unsq(x), unsq(y)];
+
+// flow plane
+let flowGeom = null, basinImg = null, basinKey = '';
+function basins() {
+  const key = pal.ordered + pal.disordered + pal.surface;
+  if (basinImg && basinKey === key) return basinImg;
+  const W = 220, H = 220, off = document.createElement('canvas'); off.width = W; off.height = H;
+  const c = off.getContext('2d'), img = c.createImageData(W, H), d = img.data;
+  const o = hexToRgb(pal.ordered), di = hexToRgb(pal.disordered), bg = hexToRgb(pal.surface), a = 0.17;
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const [K, L] = fromC((i + 0.5) / W, 1 - (j + 0.5) / H);
+    const f = fate(K, L), col = f === 1 ? o : f === -1 ? di : bg, p = 4 * (j * W + i);
+    for (let k = 0; k < 3; k++) d[p + k] = bg[k] + (col[k] - bg[k]) * a;
+    d[p + 3] = 255;
+  }
+  c.putImageData(img, 0, 0); basinImg = off; basinKey = key; return off;
+}
+// axis title made of pieces in different fonts, centred on (x, y)
+function axisLabel(ctx, parts, x, y, vertical) {
+  ctx.save(); ctx.translate(x, y); if (vertical) ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = pal.ink;
+  let w = 0;
+  parts.forEach(([t, f]) => { ctx.font = f; w += ctx.measureText(t).width; });
+  let cx = -w / 2;
+  parts.forEach(([t, f, dy]) => { ctx.font = f; ctx.fillText(t, cx, dy || 0); cx += ctx.measureText(t).width; });
+  ctx.restore();
+}
+const SYM_BIG = `italic bold 26px ${MATH}`, SYM = `italic bold 18px ${MATH}`, WORD = `bold 14px ${FONT}`;
+const SYM_MID = `italic 19px ${MATH}`, SUB = `13px ${MATH}`;
+function drawFlow() {
+  const cv = $('flow'); const { ctx, w, h } = prep(cv);
+  const pad = { l: 66, r: 12, t: 12, b: 48 };
+  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const X = (x) => pad.l + pw * x, Y = (y) => pad.t + ph * (1 - y);
+  const P = (K, L) => { const [x, y] = toC(K, L); return [X(x), Y(y)]; };
+  flowGeom = { pad, pw, ph };
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(basins(), pad.l, pad.t, pw, ph);
+  // ticks at chosen couplings
+  ctx.strokeStyle = pal.rule; ctx.lineWidth = 1; ctx.fillStyle = pal.muted; ctx.font = `12px ${FONT}`;
+  const ticks = [0, 0.1, 0.25, 0.5, 1, 2];
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ticks.forEach((k) => { const x = X(sq(k)); ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ph); ctx.stroke(); ctx.fillText(String(k), x, pad.t + ph + 5); });
+  ctx.fillText('∞', X(1), pad.t + ph + 5);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ticks.forEach((k) => { const y = Y(sq(k)); ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pw, y); ctx.stroke(); if (k > 0) ctx.fillText(String(k), pad.l - 6, y); });
+  ctx.fillText('∞', pad.l - 6, Y(1));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  axisLabel(ctx, [['K', SYM_BIG], ['(', SUB.replace('13px', '20px')], ['T', SYM_MID], [')', SUB.replace('13px', '20px')]], pad.l + pw / 2, pad.t + ph + 32, false);
+  axisLabel(ctx, [['L', SYM_BIG], ['(', SUB.replace('13px', '20px')], ['T', SYM_MID], [')', SUB.replace('13px', '20px')]], 18, pad.t + ph / 2, true);
+  // arrows
+  const n = Math.max(10, Math.round(pw / 34));
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const x = (i + 0.5) / n, y = (j + 0.5) / n;
+    const [K, L] = fromC(x, y); const [K2, L2] = mk(K, L); const [x2, y2] = toC(K2, L2);
+    let dx = (x2 - x) * pw, dy = -(y2 - y) * ph; const len = Math.hypot(dx, dy);
+    if (len < 0.3) continue;
+    const a = 13; dx *= a / len; dy *= a / len;
+    ctx.globalAlpha = Math.min(0.85, 0.25 + len / 40);
+    ctx.strokeStyle = pal.muted; ctx.fillStyle = pal.muted; ctx.lineWidth = 1.3;
+    const x0 = X(x) - dx / 2, y0 = Y(y) - dy / 2;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx, y0 + dy); ctx.stroke();
+    arrowHead(ctx, x0 + dx, y0 + dy, Math.atan2(dy, dx), 5);
+  }
+  ctx.globalAlpha = 1;
+  // curve everything converges onto
+  ctx.strokeStyle = pal.ink; ctx.globalAlpha = 0.28; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  [manifoldLow, manifoldHigh].forEach((pts) => { ctx.beginPath(); pts.forEach(([K, L], i) => { const [px, py] = P(K, L); if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke(); });
+  ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+  // boundary
+  ctx.strokeStyle = pal.crit; ctx.lineWidth = 3;
+  ctx.beginPath(); critLine.forEach(([K, L], i) => { const [px, py] = P(K, L); if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke();
+  // temperature path (dashed)
+  ctx.setLineDash([5, 5]); ctx.strokeStyle = pal.ink; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  for (let i = 0; i <= 240; i++) { const beta = 6 * Math.pow(i / 240, 2); const [px, py] = P(beta, state.r * beta); if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  // fixed points
+  ctx.font = `13px ${FONT}`;
+  const dot = (px, py, r, fill, stroke) => { ctx.beginPath(); ctx.arc(px, py, r, 0, 2 * Math.PI); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); } };
+  dot(X(0), Y(0), 8, pal.disordered, pal.surface);
+  ctx.fillStyle = pal.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText('disordered fixed point', X(0) + 12, Y(0) - 8);
+  dot(X(1), Y(1), 8, pal.ordered, pal.surface);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText('ordered fixed point', X(1) - 12, Y(1) + 8);
+  const [fx, fy] = P(FIX[0], FIX[1]);
+  dot(fx, fy, 7, pal.crit, pal.surface);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('critical point', fx + 10, fy + 4);
+  // trajectories
+  const drawTraj = (T, r, color, label, strong) => {
+    const [K0, L0c] = couplings(T, r);
+    const pts = orbit(K0, L0c, 40).map(([K, L]) => P(K, L));
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = strong ? 2.6 : 1.8;
+    ctx.beginPath(); pts.forEach(([x, y], i) => { if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke();
+    for (let i = 1; i < Math.min(pts.length, 12); i++) {
+      const [xa, ya] = pts[i - 1], [xb, yb] = pts[i];
+      if (Math.hypot(xb - xa, yb - ya) > 16) arrowHead(ctx, xb, yb, Math.atan2(yb - ya, xb - xa), strong ? 9 : 7);
+    }
+    dot(pts[0][0], pts[0][1], strong ? 7 : 5, color, pal.surface);
+    if (label) { ctx.fillStyle = color; ctx.font = `italic 15px ${MATH}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(label, pts[0][0] - 7, pts[0][1] - 6); }
+  };
+  state.marks.forEach((m, i) => drawTraj(m.T, m.r, pal.muted, 'T' + SUBS[i], false));
+  drawTraj(state.T, state.r, pal.now, '', true);
+  ctx.strokeStyle = pal.rule; ctx.lineWidth = 1; ctx.strokeRect(pad.l, pad.t, pw, ph);
+}
+
+// phase diagram
+function drawPhase() { drawPhaseOn($('phase')); drawPhaseOn($('phase2')); }
+function drawPhaseOn(cv) {
+  const { ctx, w, h } = prep(cv);
+  const pad = { l: 58, r: 12, t: 12, b: 48 };
+  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const X = (T) => pad.l + pw * (T / TMAX), Y = (r) => pad.t + ph * (1 - r / RMAX);
+  cv._geom = { pad, pw, ph };
+  const tint = (hex, a) => { const c = hexToRgb(hex), b = hexToRgb(pal.surface); return `rgb(${c.map((v, k) => Math.round(b[k] + (v - b[k]) * a)).join(',')})`; };
+  ctx.fillStyle = tint(pal.disordered, 0.17); ctx.fillRect(pad.l, pad.t, pw, ph);
+  ctx.fillStyle = tint(pal.ordered, 0.17);
+  ctx.beginPath(); ctx.moveTo(X(0), Y(0)); tcCurve.forEach(([T, r]) => ctx.lineTo(X(T), Y(r))); ctx.lineTo(X(0), Y(RMAX)); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = pal.rule; ctx.lineWidth = 1; ctx.fillStyle = pal.muted; ctx.font = `12px ${FONT}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let T = 0; T <= TMAX; T += 1) { ctx.beginPath(); ctx.moveTo(X(T), pad.t); ctx.lineTo(X(T), pad.t + ph); ctx.stroke(); ctx.fillText(String(T), X(T), pad.t + ph + 5); }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let r = 0; r <= RMAX + 1e-9; r += 0.5) { ctx.beginPath(); ctx.moveTo(pad.l, Y(r)); ctx.lineTo(pad.l + pw, Y(r)); ctx.stroke(); ctx.fillText(r.toFixed(1), pad.l - 6, Y(r)); }
+  axisLabel(ctx, [['T', SYM], [' temperature', WORD]], pad.l + pw / 2, pad.t + ph + 32, false);
+  axisLabel(ctx, [['J', SYM], ['d', `bold 13px ${MATH}`, 5], ['/J', SYM], [' ratio', WORD]], 16, pad.t + ph / 2, true);
+  ctx.strokeStyle = pal.crit; ctx.lineWidth = 3;
+  ctx.beginPath(); tcCurve.forEach(([T, r], i) => { if (i === 0) ctx.moveTo(X(T), Y(r)); else ctx.lineTo(X(T), Y(r)); }); ctx.stroke();
+  ctx.font = `13px ${FONT}`; ctx.fillStyle = pal.ink; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillText('ordered (magnet)', X(0.25), Y(1.3));
+  ctx.textAlign = 'right'; ctx.fillText('disordered', X(TMAX) - 8, Y(0.2));
+  const dot = (x, y, rad, col) => { ctx.beginPath(); ctx.arc(x, y, rad, 0, 2 * Math.PI); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = pal.surface; ctx.lineWidth = 2; ctx.stroke(); };
+  state.marks.forEach((m, i) => {
+    dot(X(m.T), Y(Math.min(m.r, RMAX)), 5, pal.muted);
+    ctx.fillStyle = pal.muted; ctx.font = `italic 14px ${MATH}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('T' + SUBS[i], X(m.T), Y(Math.min(m.r, RMAX)) - 7);
+  });
+  dot(X(Math.min(state.T, TMAX)), Y(Math.min(state.r, RMAX)), 7, pal.now);
+  ctx.strokeStyle = pal.rule; ctx.lineWidth = 1; ctx.strokeRect(pad.l, pad.t, pw, ph);
+}
+
+function update() {
+  $('ratio').value = String(state.r); $('temp').value = String(state.T);
+  $('ratio2').value = String(state.r); $('temp2').value = String(state.T);
+  $('rOut').textContent = $('rOut2').textContent = state.r.toFixed(2);
+  $('tempOut').textContent = $('tempOut2').textContent = state.T.toFixed(2);
+  drawFlow(); drawPhase();
+}
+
+// controls
+// two independent sliders: the ratio r = L/K and the temperature T (K = 1/T, L = r/T)
+$('ratio').addEventListener('input', () => { state.r = parseFloat($('ratio').value); update(); });
+$('temp').addEventListener('input', () => { state.T = parseFloat($('temp').value); update(); });
+// the second pair of sliders, under the coarse-graining snapshots, controls the same conditions
+$('ratio2').addEventListener('input', () => { state.r = parseFloat($('ratio2').value); update(); });
+$('temp2').addEventListener('input', () => { state.T = parseFloat($('temp2').value); update(); });
+$('flow').addEventListener('click', (e) => {
+  if (!flowGeom) return;
+  const rc = $('flow').getBoundingClientRect(), g = flowGeom;
+  const x = (e.clientX - rc.left - g.pad.l) / g.pw, y = 1 - (e.clientY - rc.top - g.pad.t) / g.ph;
+  if (x <= 0.005 || x >= 0.999 || y < 0 || y >= 0.999) return;
+  const [K, L] = fromC(x, y);
+  const Kn = Math.min(1.25, Math.max(0.125, K)), Ln = Math.min(1.25, Math.max(0, L));
+  state.T = 1 / Kn;
+  state.r = Math.min(RMAX, Ln / Kn);
+  update();
+});
+['phase', 'phase2'].forEach((id) => $(id).addEventListener('click', (e) => {
+  const g = $(id)._geom;
+  if (!g) return;
+  const rc = $(id).getBoundingClientRect();
+  const T = ((e.clientX - rc.left - g.pad.l) / g.pw) * TMAX, r = (1 - (e.clientY - rc.top - g.pad.t) / g.ph) * RMAX;
+  if (T < 0 || T > TMAX || r < 0 || r > RMAX) return;
+  state.T = Math.min(8, Math.max(0.8, T)); state.r = r; update();
+}));
+
+// lattice
+const lat = new Int8Array(L0 * L0); for (let i = 0; i < lat.length; i++) lat[i] = Math.random() < 0.5 ? 1 : -1;
+const stack = new Int32Array(L0 * L0);
+let up = hexToRgb(pal.up), down = hexToRgb(pal.down);
+function drawSpins(cv, s, L, flip) {
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(L, L), d = img.data;
+  let M = 0;
+  for (let i = 0; i < L * L; i++) {
+    const v = flip ? -s[i] : s[i]; M += v;
+    const c = v > 0 ? up : down;
+    d[4 * i] = c[0]; d[4 * i + 1] = c[1]; d[4 * i + 2] = c[2]; d[4 * i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return Math.abs(M) / (L * L);
+}
+let running = true;
+document.addEventListener('visibilitychange', () => { running = !document.hidden; });
+const FRAME_MS = 400; // about 2.5 updates per second
+let lastFrame = -Infinity;
+function tick(now) {
+  if (running && now - lastFrame >= FRAME_MS) {
+    lastFrame = now;
+    // NOTE: nearest-neighbour model only (no L), at the same T/Tc as the chosen conditions,
+    // updated with Wolff cluster flips. The page text describes single-spin sampling of the
+    // full K + L model; see the comment above the Coarse-graining text in the HTML.
+    const Ksim = Math.min(3, KC_EXACT * Tc(state.r) / state.T);
+    wolffSweep(lat, L0, Ksim, stack);
+    wolffSweep(lat, L0, Ksim, stack);
+    let M = 0; for (let i = 0; i < lat.length; i++) M += lat[i];
+    const flip = M < 0; // keep colours steady: show the majority as up
+    const levels = [lat]; let cur = lat, L = L0;
+    for (let k = 1; k < 4; k++) { cur = coarseGrain3(cur, L); L /= 3; levels.push(cur); }
+    [243, 81, 27, 9].forEach((size, k) => { $('m' + k).textContent = '|m| = ' + drawSpins($('z' + k), levels[k], size, flip).toFixed(2); });
+  }
+  requestAnimationFrame(tick);
+}
+
+const redraw = () => { readPalette(); up = hexToRgb(pal.up); down = hexToRgb(pal.down); basinImg = null; update(); };
+window.addEventListener('resize', () => { drawFlow(); drawPhase(); });
+if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
+new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawFlow(); drawPhase(); });
+
+state.T = +(0.85 * Tc(state.r)).toFixed(2);
+update();
+for (let i = 0; i < 10; i++) wolffSweep(lat, L0, Math.min(3, KC_EXACT * Tc(state.r) / state.T), stack);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
